@@ -1,10 +1,13 @@
 use std::env;
 use std::fs;
 
+mod ast;
 mod lexer;
+mod parser;
 mod token;
 
 use lexer::Lexer;
+use parser::Parser;
 #[allow(unused_imports)]
 use token::Token;
 
@@ -27,10 +30,13 @@ fn main() {
             println!("File read successfully");
             let mut lexer = Lexer::new(content);
             let tokens = lexer.tokenize();
-            for token in &tokens {
-                println!("{:?} {:?}", token.kind, token.value);
-            }
+            // for token in &tokens {
+            //     println!("{:?} {:?}", token.kind, token.value);
+            // }
             // println!("{:#?}", tokens);
+            let mut parser = Parser::new(tokens);
+            let decls = parser.parse();
+            println!("{:#?}", decls);
         }
         Err(e) => {
             eprintln!("Error reading '{}': {}", file_path, e);

@@ -69,7 +69,7 @@ impl Lexer {
 
                             let text = self.source[start..end].to_string();
                             tokens.push(Token {
-                                kind: TokenKind::StringLiteral,
+                                kind: TokenKind::StrLiteral,
                                 value: text,
                                 line,
                                 column,
@@ -142,7 +142,7 @@ impl Lexer {
                     // last number bro cmon
                     let value = self.source[start..self.position].to_string();
                     let kind = if is_float {
-                        TokenKind::FloatLiteral
+                        TokenKind::FltLiteral
                     } else {
                         TokenKind::IntLiteral
                     };
@@ -168,18 +168,18 @@ impl Lexer {
 
                     let word = self.source[start..self.position].to_string();
                     let kind = match word.as_str() {
-                        "flex" => TokenKind::Flex,
+                        "mut" => TokenKind::Mut,
                         "if" => TokenKind::If,
                         "else" => TokenKind::Else,
-                        "when" => TokenKind::When,
+                        // "match" => TokenKind::Match,
                         "in" => TokenKind::In,
                         "then" => TokenKind::Then,
-                        "structure" => TokenKind::Structure,
+                        "struct" => TokenKind::Struct,
                         "error" => TokenKind::Error,
-                        "integer" => TokenKind::IntegerType,
-                        "float" => TokenKind::FloatType,
-                        "string" => TokenKind::StringType,
-                        "boolean" => TokenKind::BooleanType,
+                        "int" => TokenKind::IntType,
+                        "flt" => TokenKind::FltType,
+                        "str" => TokenKind::StrType,
+                        "bool" => TokenKind::BoolType,
                         "abyss" => TokenKind::AbyssType,
                         "true" => TokenKind::True,
                         "false" => TokenKind::False,
@@ -209,8 +209,8 @@ impl Lexer {
                         tokens.push(Token {
                             kind: TokenKind::DoubleEquals,
                             value: "==".to_string(),
-                            line: self.line,
-                            column: self.column,
+                            line,
+                            column,
                         });
                     } else {
                         tokens.push(Token {
@@ -394,8 +394,8 @@ impl Lexer {
                         tokens.push(Token {
                             kind: TokenKind::Minus,
                             value: "-".to_string(),
-                            line: self.line,
-                            column: self.column,
+                            line,
+                            column,
                         })
                     }
                 }

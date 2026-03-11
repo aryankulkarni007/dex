@@ -1,24 +1,24 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum TokenKind {
     IntLiteral,
-    FloatLiteral,
-    StringLiteral,
+    FltLiteral,
+    StrLiteral,
 
-    Flex,
+    Mut,
     If,
     Else,
-    When,
+    // Match,
     In,
     Then,
-    Structure,
+    Struct,
     Error,
     I,
     AbyssType,
-    IntegerType,
-    FloatType,
-    StringType,
-    BooleanType,
+    IntType,
+    FltType,
+    StrType,
+    BoolType,
     True,
     False,
 
@@ -69,7 +69,7 @@ pub enum TokenKind {
     EOF,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub struct Token {
     pub kind: TokenKind,

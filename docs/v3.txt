@@ -1,0 +1,52 @@
+# New draft of Dex syntax
+
+structure Point {
+  x: flt, y: flt
+
+  # unnamed means it is the constructor
+  f(ego, a: int, b: int)) -> Point {
+    ego.a = a
+    ego.b = b
+    ego
+  }
+
+  f(ego, point: Point) -> flt {
+    ((ego.x - point.x)^2 + (ego.y - point.y)^2)^0.5
+  }
+};
+
+f(a: int, b: int) add -> int { a + b }
+
+f(nums: [int]) double_evens -> [int] {
+  # this works because filter and map are implemented for lists
+  result = nums >> filter(n -> n % 2 == 0) >> map(n -> n * 2)
+}
+
+f() main -> int {
+    x = 5.0
+    y = 10.5
+    z = 7.3
+
+    # Double bang is print
+    !!(x)
+    !!(add(x, z))
+
+    list = [0, 1, 2]
+    new = double_evens(list)
+
+    !!(new)  # should be [0, 1, 4]
+
+    mut point = Point(x, y)
+    mut other = Point(x, z)
+  
+    dist = point >> distance(other)
+
+    dict = {1: "a", 2: "b"}
+
+    # example iterator
+    I(key, val in dict) -> { !!("Key: {}, Val: {}\n", key, val) }
+
+    # not sure with the match statement syntax
+    I(match x) -> { }
+}
+

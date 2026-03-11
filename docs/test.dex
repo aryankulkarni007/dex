@@ -1,0 +1,9 @@
+x = 5
+name = "hello"
+ratio = 3.14
+struct Point {
+    x: flt,
+    y: flt
+    @(self: Point) print -> abyss { }
+}
+@(a: int, b: int) add -> int { }

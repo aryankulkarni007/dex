@@ -1,0 +1,87 @@
+# Top level
+program     ::= decl*
+
+decl        ::= func_decl
+              | struct_decl
+              | binding
+
+# Declarations
+func_decl   ::= '@' '(' params ')' IDENTIFIER '->' type block
+
+struct_decl ::= 'struct' IDENTIFIER '{' struct_body '}'
+struct_body ::= field* func_decl*
+field       ::= IDENTIFIER ':' type ','?
+
+binding     ::= 'mut'? IDENTIFIER (':' type)? '=' expr
+
+params      ::= (param (',' param)*)?
+param       ::= IDENTIFIER ':' type
+
+# Types
+type        ::= 'int' | 'flt' | 'str' | 'bool' | 'abyss'
+              | '[' type ']'
+              | '{' type ':' type '}'
+              | IDENTIFIER
+              | type '|' 'error'
+
+# Statements inside blocks
+block       ::= '{' stmt* '}'
+stmt        ::= binding
+              | expr
+
+# Expressions — ordered by precedence, lowest first
+expr        ::= assignment
+assignment  ::= IDENTIFIER '=' expr
+              | pipeline
+
+pipeline    ::= or ('>>' or)*
+
+or          ::= and ('||' and)*
+and         ::= comparison ('&&' comparison)*
+
+comparison  ::= addition (('==' | '!=' | '<' | '>' | '<=' | '>=') addition)*
+
+addition    ::= multiply (('+' | '-') multiply)*
+multiply    ::= power (('*' | '/' | '%') power)*
+power       ::= unary ('^' unary)*
+
+unary       ::= '!' expr
+              | postfix
+
+postfix     ::= primary (':' IDENTIFIER '(' args ')')* # method call
+              | primary ('(' args ')')*                 # function call
+              | primary '?'                             # error propagation
+
+primary     ::= INT_LIT
+              | FLT_LIT
+              | STR_LIT
+              | 'true' | 'false'
+              | 'abyss'
+              | IDENTIFIER
+              | '(' expr ')'
+              | list_lit
+              | map_lit
+              | if_expr
+              | match_expr
+              | loop_expr
+              | lambda
+
+# Literals
+list_lit    ::= '[' (expr (',' expr)*)? ']'
+map_lit     ::= '{' (expr ':' expr (',' expr ':' expr)*)? '}'
+
+# Lambda
+lambda      ::= IDENTIFIER '->' expr
+
+# Control flow — these are expressions, they return values
+if_expr     ::= 'if' expr block ('else' block)?
+
+match_expr  ::= 'match' expr '{' match_arm+ '}'
+match_arm   ::= '|' pattern '->' (expr | block)
+pattern     ::= '_'
+              | ('>' | '<' | '>=' | '<=' | '==') expr
+              | expr
+
+loop_expr   ::= 'I' '(' IDENTIFIER 'in' expr ')' '->' (expr | block)
+
+args        ::= (expr (',' expr)*)?
