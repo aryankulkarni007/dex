@@ -1,0 +1,61 @@
+#-
+    Sample Dex program — lexer test
+    Covers every token type we need to handle
+-#
+
+# Bindings
+x = 42
+flex count = 0
+ratio: float = 3.14
+name = "Aryan"
+
+# Function
+@(a: integer, b: integer) add -> integer {
+    a + b
+}
+
+# Lambda
+double = n ~> n * 2
+
+# structure
+structure Point {
+    x: float
+    y: float
+
+    @(ego, x: float, y: float) create -> Point {
+        ego.x = x
+        ego.y = y
+    }
+
+    @(ego, other: Point) distance -> float {
+        ((ego.x - other.x)^2 + (ego.y - other.y)^2)^0.5
+    }
+}
+
+# Collections
+nums: [integer] = [1, 2, 3, 4, 5]
+flex scores: {string: integer} = {"alice": 10, "bob": 8}
+
+# Pipeline
+result = nums >> filter(n ~> n % 2 == 0) >> map(n ~> n * 2)
+
+# Control flow
+if x > 3 {
+    !("big\n")
+} else {
+    !("small\n")
+}
+
+when x {
+    > 3 : !("big\n")
+    0   : !("zero\n")
+    _   : !("other\n")
+}
+
+I(n in nums) : !("{n}\n")
+
+# Error handling
+@(path: string) load -> string | error {
+    content = read_file(path)?
+    content >> trim
+}

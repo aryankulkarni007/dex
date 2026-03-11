@@ -1,0 +1,80 @@
+# Maybe the language's linter likes folding certain things into one line, to decrease the length of documents
+# I like the idea that the names of things are either the full word, or just one letter. No abbreviations 
+# variable binding
+
+x = 5
+delta x = 5 # btw what did you mean by modifer not sigil
+
+# typed binding
+
+x: i = 5
+
+# function definition like in maths
+
+f(a: i, b: i) add -> i { a + b }
+
+# multi-line function needs braces ig. snake case default
+
+f(nums: [i]) double_evens -> [i] {
+return nums >> filter(n -> n % 2 == 0) >> map(n -> n \* 2)
+}
+
+# Perhaps there is are several sequential storage types:
+# This section is heavily up for debate. I suppose implementing data structures it far far in the future
+
+x: [i] = [1, 2, 3, 4, 5]  # default dynamic vector, immutable? (language default)
+                            # if it is immutable how do we do anything to it lol?
+
+y: {i} = {1, 2, 3, 4, 5}  # set like python set? 
+
+z: [[i]] = [[1:a], [2:b]] # in built dict?
+
+r: <i> = <1, 2, 3, 4, 5> # "stream" or "queue"
+
+# conditional
+
+x > 3 then !("yes") # !() could be print in my language maybe !!() is error print
+
+# multi branch
+match x {
+    | > 3 , !("big")
+    | 0   , !("zero")
+    | _   , !("other")
+  }
+
+# loops
+I(n in seq) -> !("{n}, ") # i.e. -> is the return operator for a function as well as a loop maybe
+
+I(key, val in dict) -> {
+    !("[Key: {key}, Value: {val}]\n")
+}
+
+# structures maybe this language distinguishes only has structures. But they can function as classes
+
+structure Point -> { x: f, y: f } # no method allowed. Just for data storage
+
+structure class Point -> { # methods and other OOP allowed
+  x: f, y: f
+
+# methods
+  # shi convert that turning this language into a context free grammar might become really hard
+  # if we go with the first example
+  c(ego, x: f, y: f) -> ego  # c is the tag for a constructor maybe
+    ego.(x, y) = x, y 
+    # OR
+    ego.x = x, ego.y = y
+
+  m(ego, point: Point) -> f  # m for methods?
+    ((ego.x - point.x)^2 + (ego.y - point.y)^2)^0.5
+} 
+
+# maybe error handling isn't dealt with in the function signature:
+f(path: s) read_file -> s
+  # maybe return values can be defined at the start 
+  () -> content << content = open(path)
+
+# maybe it is handled in the signature:
+f(path: s) read_file -> s | error
+  () -> content << content = open(path)
+
+# maybe there is no return key word it is just () ->
