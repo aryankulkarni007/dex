@@ -17,4 +17,4 @@
 # x = !(5)
 # y = !!(x)
 
-result = nums >> filter(n) >> map(n)
+x = I(key, val in dict) -> { 1 }

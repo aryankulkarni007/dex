@@ -226,10 +226,14 @@ impl Parser {
     fn parse_multiplication(&mut self) -> Result<Expr, ParserError> {
         let mut left = self.parse_power()?;
 
-        while self.check(TokenKind::Star) || self.check(TokenKind::Slash) {
+        while self.check(TokenKind::Star)
+            || self.check(TokenKind::Slash)
+            || self.check(TokenKind::Percent)
+        {
             let op = match self.advance().kind {
                 TokenKind::Star => BinaryOp::Multiply,
                 TokenKind::Slash => BinaryOp::Divide,
+                TokenKind::Percent => BinaryOp::Modulo,
                 _ => unreachable!(),
             };
             let right = self.parse_power()?;
@@ -266,6 +270,16 @@ impl Parser {
         } else {
             self.parse_primary()
         }
+    }
+
+    fn parse_block(&mut self) -> Result<Vec<Expr>, ParserError> {
+        self.expect(TokenKind::LeftBrace)?;
+        let mut exprs = Vec::new();
+        while !self.check(TokenKind::RightBrace) && !self.check(TokenKind::EOF) {
+            exprs.push(self.parse_expr()?);
+        }
+        self.expect(TokenKind::RightBrace)?;
+        Ok(exprs)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParserError> {
@@ -307,6 +321,10 @@ impl Parser {
                         method,
                         args,
                     ))
+                } else if self.check(TokenKind::Arrow) {
+                    self.advance(); // consume ->
+                    let body = self.parse_expr()?;
+                    Ok(Expr::Lambda(name, Box::new(body)))
                 } else {
                     Ok(Expr::Identifier(name))
                 }
@@ -324,6 +342,36 @@ impl Parser {
             TokenKind::False => {
                 self.advance();
                 Ok(Expr::Bool(false))
+            }
+            TokenKind::If => {
+                self.advance();
+                let condition = self.parse_expr()?;
+                let body = self.parse_block()?;
+                let else_block = if self.check(TokenKind::Else) {
+                    self.advance();
+                    Some(self.parse_block()?)
+                } else {
+                    None
+                };
+                Ok(Expr::If(Box::new(condition), body, else_block))
+            }
+            TokenKind::I => {
+                self.advance();
+                self.expect(TokenKind::LeftParen)?;
+                let mut vars = Vec::new();
+                while !self.check(TokenKind::In) {
+                    let var = self.expect(TokenKind::Identifier)?.value.clone();
+                    vars.push(var);
+                    if self.check(TokenKind::Comma) {
+                        self.advance();
+                    }
+                }
+                self.expect(TokenKind::In)?;
+                let iter = self.parse_expr()?;
+                self.expect(TokenKind::RightParen)?;
+                self.expect(TokenKind::Arrow)?;
+                let body = self.parse_block()?;
+                Ok(Expr::Loop(vars, Box::new(iter), body))
             }
             _ => {
                 let tok = self.peek();
