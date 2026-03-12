@@ -67,8 +67,10 @@ pub enum BinaryOp {
 
 #[derive(Debug)]
 pub enum UnaryOp {
-    Print,      // !
-    DebugPrint, // !!
+    Not,
+    Neg, // unary minus
+         // Print,      // !
+         // DebugPrint, // !!
 }
 
 #[derive(Debug)]

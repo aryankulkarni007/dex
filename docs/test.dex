@@ -1,9 +1,20 @@
-x = 5
-name = "hello"
-ratio = 3.14
-struct Point {
-    x: flt,
-    y: flt
-    @(self: Point) print -> abyss { }
-}
-@(a: int, b: int) add -> int { }
+# x = 5
+# name = "hello"
+# ratio = 3.14
+
+# struct Point {
+#     x: flt,
+#     y: flt
+#     @(self: Point) print -> abyss { }
+# }
+
+# @(a: int, b: int) add -> int { }
+
+# x = 1 + 2 * 3
+# y = 2 ^ 3 ^ 2
+# z = x == 5
+
+# x = !(5)
+# y = !!(x)
+
+result = nums >> filter(n) >> map(n)
