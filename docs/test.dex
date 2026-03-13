@@ -17,4 +17,8 @@
 # x = !(5)
 # y = !!(x)
 
-x = I(key, val in dict) -> { 1 }
+@(p: Point) test -> abyss {
+    result = p:distance(other)
+    p.x
+    foo(1, 2)?
+}

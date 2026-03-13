@@ -35,8 +35,9 @@ fn main() {
             // }
             // println!("{:#?}", tokens);
             let mut parser = Parser::new(tokens);
-            let decls = parser.parse();
+            let (decls, errors) = parser.parse();
             println!("{:#?}", decls);
+            println!("{:#?}", errors);
         }
         Err(e) => {
             eprintln!("Error reading '{}': {}", file_path, e);

@@ -9,6 +9,7 @@ pub enum Type {
     Map(Box<Type>, Box<Type>),
     Result(Box<Type>),
     Named(String),
+    Inferred,
 }
 
 #[derive(Debug)]
@@ -22,7 +23,7 @@ pub struct FuncDecl {
     pub name: String,
     pub params: Vec<Param>,
     pub return_type: Type,
-    pub body: Vec<Expr>,
+    pub body: Vec<Stmt>,
 }
 
 #[derive(Debug)]
@@ -74,23 +75,30 @@ pub enum UnaryOp {
 }
 
 #[derive(Debug)]
+pub enum Stmt {
+    Binding(BindingDecl),
+    Expr(Expr),
+}
+
+#[derive(Debug)]
 pub enum Expr {
     Int(i64),
     Flt(f64),
     Str(String),
     Bool(bool),
-    Abyss,
+    // Abyss,
     Identifier(String),
     Binary(Box<Expr>, BinaryOp, Box<Expr>),
     Unary(UnaryOp, Box<Expr>),
     Call(Box<Expr>, Vec<Expr>),
     MethodCall(Box<Expr>, String, Vec<Expr>),
     Pipeline(Box<Expr>, Box<Expr>),
-    Assign(String, Box<Expr>),
+    Assign(Box<Expr>, Box<Expr>),
     Lambda(String, Box<Expr>),
     Try(Box<Expr>),
     ListLiteral(Vec<Expr>),
     MapLiteral(Vec<(Expr, Expr)>),
-    If(Box<Expr>, Vec<Expr>, Option<Vec<Expr>>),
-    Loop(Vec<String>, Box<Expr>, Vec<Expr>),
+    If(Box<Expr>, Vec<Stmt>, Option<Vec<Stmt>>),
+    Loop(Vec<String>, Box<Expr>, Vec<Stmt>),
+    FieldAccess(Box<Expr>, String),
 }
