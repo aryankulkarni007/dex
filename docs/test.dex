@@ -17,9 +17,17 @@
 # x = !(5)
 # y = !!(x)
 
-@() main -> int {
-    list = [1, 2, 3, 4, 5]
-    I (n in list) -> {
-        print(n)
+struct Point {
+    x: flt, y: flt
+
+    @(self, new_x) set_x -> abyss {
+        self.x = new_x
     }
 }
+
+@() main -> int {
+    p = Point(1.0, 2.0)
+    p:set_x(99.0)
+    print(p.x)
+}
+

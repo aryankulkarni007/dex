@@ -1,7 +1,8 @@
 use std::{collections::HashMap, iter};
 
 use crate::ast::{
-    BinaryOp, Decl, Expr, FuncDecl, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, UnaryOp,
+    BinaryOp, Decl, Expr, FuncDecl, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, StructDecl,
+    UnaryOp,
 };
 
 #[derive(Debug, Clone)]
@@ -16,17 +17,24 @@ pub enum Value {
     Error(String),
     Function(Vec<String>, Vec<SpannedStmt>),
     Builtin(String),
+    Struct(String, usize),
+    StructDef(StructDecl),
 }
 
 impl Value {
     pub fn display(&self) -> String {
         match self {
             Value::Int(n) => n.to_string(),
-            Value::Flt(f) => f.to_string(),
+            Value::Flt(f) => {
+                if f.fract() == 0.0 {
+                    format!("{:.1}", f)
+                } else {
+                    f.to_string()
+                }
+            }
             Value::Str(s) => format!("\"{}\"", s),
             Value::Bool(b) => b.to_string(),
             Value::Abyss => "abyss".to_string(),
-
             Value::List(items) => {
                 let inner = items
                     .iter()
@@ -35,7 +43,6 @@ impl Value {
                     .join(", ");
                 format!("[{}]", inner)
             }
-
             Value::Map(pairs) => {
                 let inner = pairs
                     .iter()
@@ -44,15 +51,23 @@ impl Value {
                     .join(", ");
                 format!("{{ {} }}", inner)
             }
-
             Value::Error(e) => format!("error: {}", e),
             Value::Function(_, _) => "<function>".to_string(),
             Value::Builtin(name) => format!("<builtin: {}>", name),
+            Value::Struct(name, idx) => format!("<{} at {}>", name, idx),
+            Value::StructDef(struct_decl) => {
+                let fields = struct_decl
+                    .variables
+                    .iter()
+                    .map(|v| v.name.clone())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("<struct def: {}({})>", struct_decl.name, fields)
+            }
         }
     }
 }
 
-#[derive(Debug)]
 pub struct InterpreterError {
     message: String,
     line: usize,
@@ -61,15 +76,23 @@ pub struct InterpreterError {
 
 pub struct Interpreter {
     scopes: Vec<HashMap<String, Value>>,
+    heap: Vec<HashMap<String, Value>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         let mut interpreter = Interpreter {
             scopes: vec![HashMap::new()],
+            heap: Vec::new(),
         };
         interpreter.register_builtins();
         interpreter
+    }
+
+    fn allocate_struct(&mut self, fields: HashMap<String, Value>) -> usize {
+        let index = self.heap.len();
+        self.heap.push(fields);
+        index
     }
 
     fn lookup(&self, name: &str) -> Option<Value> {
@@ -262,7 +285,15 @@ impl Interpreter {
                             Err(self.error(&format!("undefined variable '{}'", name), span))
                         }
                     }
-                    Expr::FieldAccess(_, _) => todo!(),
+                    Expr::FieldAccess(object, field_name) => {
+                        let obj = self.eval_expr(object)?;
+                        if let Value::Struct(_, idx) = obj {
+                            self.heap[idx].insert(field_name.clone(), val);
+                            Ok(Value::Abyss)
+                        } else {
+                            Err(self.error("field assignment on non-struct value", span))
+                        }
+                    }
                     _ => Err(self.error("invalid assignment target", span)),
                 }
             }
@@ -270,13 +301,15 @@ impl Interpreter {
                 let value = self.eval_expr(callee)?;
                 match value {
                     Value::Function(param_names, body) => {
-                        let args: Result<Vec<Value>, _> =
-                            call_args.iter().map(|a| self.eval_expr(a)).collect();
-                        let args = args?;
+                        let args = call_args
+                            .iter()
+                            .map(|a| self.eval_expr(a))
+                            .collect::<Result<Vec<_>, _>>()?;
                         self.scopes.push(HashMap::new());
-                        for (name, val) in param_names.iter().zip(args) {
-                            self.define(name.clone(), val);
-                        }
+                        param_names
+                            .iter()
+                            .zip(args)
+                            .for_each(|(name, val)| self.define(name.clone(), val));
                         let result = self.eval_block(&body);
                         self.scopes.pop();
                         result
@@ -295,10 +328,76 @@ impl Interpreter {
                         }
                         _ => Err(self.error(&format!("unknown builtin '{}'", name), span)),
                     },
+                    Value::StructDef(struct_decl) => {
+                        let args: Vec<Value> = call_args
+                            .iter()
+                            .map(|a| self.eval_expr(a))
+                            .collect::<Result<Vec<_>, _>>()?;
+                        let fields: HashMap<String, Value> = struct_decl
+                            .variables
+                            .iter()
+                            .zip(args)
+                            .map(|(p, v)| (p.name.clone(), v))
+                            .collect();
+
+                        let index = self.allocate_struct(fields);
+                        Ok(Value::Struct(struct_decl.name.clone(), index))
+                    }
                     _ => Err(self.error("cannot call a non-function value", span)),
                 }
             }
-            _ => todo!(),
+            Expr::FieldAccess(expr, field_name) => {
+                let obj = self.eval_expr(expr)?;
+                match obj {
+                    Value::Struct(_, idx) => self.heap[idx]
+                        .get(field_name)
+                        .cloned()
+                        .ok_or_else(|| self.error(&format!("no field '{}'", field_name), span)),
+                    _ => Err(self.error("field access on non-struct value", span)),
+                }
+            }
+            Expr::MethodCall(receiver, method_name, call_args) => {
+                let obj = self.eval_expr(receiver)?;
+                match obj.clone() {
+                    Value::Struct(type_name, index) => {
+                        let struct_def = match self.lookup(&type_name) {
+                            Some(Value::StructDef(def)) => def,
+                            _ => {
+                                return Err(
+                                    self.error(&format!("unknown struct '{}'", type_name), span)
+                                )
+                            }
+                        };
+                        let method = struct_def
+                            .methods
+                            .iter()
+                            .find(|m| &m.name == method_name)
+                            .ok_or_else(|| {
+                                self.error(
+                                    &format!("no method '{}' on '{}'", method_name, type_name),
+                                    span,
+                                )
+                            })?
+                            .clone();
+                        self.scopes.push(HashMap::new());
+                        self.define("self".to_string(), obj);
+
+                        let args: Vec<Value> = call_args
+                            .iter()
+                            .map(|a| self.eval_expr(a))
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        for (param, val) in method.params.iter().skip(1).zip(args) {
+                            self.define(param.name.clone(), val);
+                        }
+                        let result = self.eval_block(&method.body);
+                        self.scopes.pop();
+                        result
+                    }
+                    _ => Err(self.error("method call on non-struct value", span)),
+                }
+            }
+            _ => Err(self.error("expression type not yet implemented", span)),
         }
     }
 
@@ -358,7 +457,9 @@ impl Interpreter {
                     let value = self.eval_expr(&binding.value)?;
                     self.define(binding.name, value);
                 }
-                Decl::Struct(struct_decl) => todo!(),
+                Decl::Struct(struct_decl) => {
+                    self.define(struct_decl.name.clone(), Value::StructDef(struct_decl));
+                }
             }
         }
         let main = self.lookup("main").ok_or_else(|| InterpreterError {
