@@ -2,13 +2,13 @@ use std::env;
 use std::fs;
 
 mod ast;
+mod interpreter;
 mod lexer;
 mod parser;
 mod token;
 
 use lexer::Lexer;
 use parser::Parser;
-#[allow(unused_imports)]
 use token::Token;
 
 fn read_file(path: &str) -> Result<String, std::io::Error> {
