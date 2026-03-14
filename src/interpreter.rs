@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, iter};
 
-use crate::ast::{BinaryOp, Decl, Expr, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, UnaryOp};
+use crate::ast::{
+    BinaryOp, Decl, Expr, FuncDecl, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, UnaryOp,
+};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -13,6 +15,41 @@ pub enum Value {
     Abyss,
     Error(String),
     Function(Vec<String>, Vec<SpannedStmt>),
+    Builtin(String),
+}
+
+impl Value {
+    pub fn display(&self) -> String {
+        match self {
+            Value::Int(n) => n.to_string(),
+            Value::Flt(f) => f.to_string(),
+            Value::Str(s) => format!("\"{}\"", s),
+            Value::Bool(b) => b.to_string(),
+            Value::Abyss => "abyss".to_string(),
+
+            Value::List(items) => {
+                let inner = items
+                    .iter()
+                    .map(|item| item.display())
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("[{}]", inner)
+            }
+
+            Value::Map(pairs) => {
+                let inner = pairs
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k.display(), v.display()))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("{{ {} }}", inner)
+            }
+
+            Value::Error(e) => format!("error: {}", e),
+            Value::Function(_, _) => "<function>".to_string(),
+            Value::Builtin(name) => format!("<builtin: {}>", name),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -28,9 +65,11 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        Interpreter {
+        let mut interpreter = Interpreter {
             scopes: vec![HashMap::new()],
-        }
+        };
+        interpreter.register_builtins();
+        interpreter
     }
 
     fn lookup(&self, name: &str) -> Option<Value> {
@@ -242,11 +281,29 @@ impl Interpreter {
                         self.scopes.pop();
                         result
                     }
-                    _ => todo!(),
+                    Value::Builtin(name) => match name.as_str() {
+                        "print" => {
+                            call_args.iter().try_for_each(
+                                |arg| -> Result<(), InterpreterError> {
+                                    let val = self.eval_expr(arg)?;
+                                    println!("{}", val.display());
+                                    Ok(())
+                                },
+                            )?;
+
+                            Ok(Value::Abyss)
+                        }
+                        _ => Err(self.error(&format!("unknown builtin '{}'", name), span)),
+                    },
+                    _ => Err(self.error("cannot call a non-function value", span)),
                 }
             }
             _ => todo!(),
         }
+    }
+
+    fn register_builtins(&mut self) {
+        self.define("print".to_string(), Value::Builtin("print".to_string()));
     }
 
     fn assign(&mut self, name: &str, value: Value) -> bool {
@@ -287,7 +344,35 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&mut self, decls: Vec<Decl>) -> Result<Value, InterpreterError> {
-        todo!()
+    pub fn interpret(&mut self, decls: Vec<Spanned<Decl>>) -> Result<Value, InterpreterError> {
+        for decl in decls {
+            match decl.node {
+                Decl::Func(func) => {
+                    let value = Value::Function(
+                        func.params.iter().map(|p| p.name.clone()).collect(),
+                        func.body,
+                    );
+                    self.define(func.name, value);
+                }
+                Decl::Binding(binding) => {
+                    let value = self.eval_expr(&binding.value)?;
+                    self.define(binding.name, value);
+                }
+                Decl::Struct(struct_decl) => todo!(),
+            }
+        }
+        let main = self.lookup("main").ok_or_else(|| InterpreterError {
+            message: "no main function found".to_string(),
+            line: 0,
+            column: 0,
+        })?;
+        match main {
+            Value::Function(_, body) => self.eval_block(&body),
+            _ => Err(InterpreterError {
+                message: "main is not a function".to_string(),
+                line: 0,
+                column: 0,
+            }),
+        }
     }
 }

@@ -7,6 +7,7 @@ mod lexer;
 mod parser;
 mod token;
 
+use interpreter::Interpreter;
 use lexer::Lexer;
 use parser::Parser;
 use token::Token;
@@ -36,8 +37,10 @@ fn main() {
             // println!("{:#?}", tokens);
             let mut parser = Parser::new(tokens);
             let (decls, errors) = parser.parse();
-            println!("{:#?}", decls);
-            println!("{:#?}", errors);
+            // println!("{:#?}", decls);
+            // println!("{:#?}", errors);
+            let mut interpreter = Interpreter::new();
+            let value = interpreter.interpret(decls);
         }
         Err(e) => {
             eprintln!("Error reading '{}': {}", file_path, e);

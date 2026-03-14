@@ -17,8 +17,9 @@
 # x = !(5)
 # y = !!(x)
 
-@(p: Point) test -> abyss {
-    result = p:distance(other)
-    p.x
-    foo(1, 2)?
+@() main -> int {
+    list = [1, 2, 3, 4, 5]
+    I (n in list) -> {
+        print(n)
+    }
 }
