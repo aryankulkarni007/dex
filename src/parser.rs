@@ -429,6 +429,12 @@ impl Parser {
                 let span = self.span();
                 self.advance();
                 expr = self.spanned(Expr::Try(Box::new(expr)), span);
+            } else if self.check(TokenKind::LeftBracket) {
+                let span = self.span();
+                self.advance();
+                let index = self.parse_expr()?;
+                self.expect(TokenKind::RightBracket)?;
+                expr = self.spanned(Expr::Index(Box::new(expr), Box::new(index)), span);
             } else {
                 break;
             }

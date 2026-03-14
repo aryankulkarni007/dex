@@ -216,4 +216,6 @@ pub enum Expr {
     /// Field access on a struct e.g. `point.x`
     /// Fields: (object_expr, field_name)
     FieldAccess(Box<SpannedExpr>, String),
+    /// list expression, index expression
+    Index(Box<SpannedExpr>, Box<SpannedExpr>),
 }

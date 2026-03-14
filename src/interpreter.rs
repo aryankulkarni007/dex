@@ -397,6 +397,20 @@ impl Interpreter {
                     _ => Err(self.error("method call on non-struct value", span)),
                 }
             }
+            Expr::Index(list, index) => {
+                let list = self.eval_expr(list)?;
+                let index = self.eval_expr(index)?;
+                match (list, index) {
+                    (Value::List(items), Value::Int(i)) => {
+                        if i < 0 || i as usize >= items.len() {
+                            Err(self.error("index out of bound", span))
+                        } else {
+                            Ok(items[i as usize].clone())
+                        }
+                    }
+                    _ => Err(self.error("invalid index expression", span)),
+                }
+            }
             _ => Err(self.error("expression type not yet implemented", span)),
         }
     }
