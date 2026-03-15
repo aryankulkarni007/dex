@@ -1,8 +1,8 @@
-use std::{collections::HashMap, iter};
+use std::collections::HashMap;
 
 use crate::ast::{
-    BinaryOp, Decl, Expr, FuncDecl, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, StructDecl,
-    UnaryOp,
+    BinaryOp, Decl, Expr, FuncDecl, Span, Spanned, SpannedExpr, SpannedStmt, Stmt, StringPart,
+    StructDecl, UnaryOp,
 };
 
 #[derive(Debug, Clone)]
@@ -69,9 +69,9 @@ impl Value {
 }
 
 pub struct InterpreterError {
-    message: String,
-    line: usize,
-    column: usize,
+    pub message: String,
+    pub line: usize,
+    pub column: usize,
 }
 
 pub struct Interpreter {
@@ -319,11 +319,13 @@ impl Interpreter {
                             call_args.iter().try_for_each(
                                 |arg| -> Result<(), InterpreterError> {
                                     let val = self.eval_expr(arg)?;
-                                    println!("{}", val.display());
+                                    match &val {
+                                        Value::Str(s) => println!("{}", s),
+                                        _ => println!("{}", val.display()),
+                                    }
                                     Ok(())
                                 },
                             )?;
-
                             Ok(Value::Abyss)
                         }
                         _ => Err(self.error(&format!("unknown builtin '{}'", name), span)),
@@ -411,12 +413,105 @@ impl Interpreter {
                     _ => Err(self.error("invalid index expression", span)),
                 }
             }
+            Expr::StringInterp(parts) => {
+                let mut result = String::new();
+                for part in parts {
+                    match part {
+                        StringPart::Literal(s) => result.push_str(s),
+                        StringPart::Expr(e) => {
+                            let val = self.eval_expr(e)?;
+                            let displayed = match &val {
+                                Value::Str(s) => s.clone(),
+                                _ => val.display(),
+                            };
+                            result.push_str(&displayed);
+                        }
+                    }
+                }
+                Ok(Value::Str(result))
+            }
+            Expr::Pipeline(left, right) => {
+                let left_val = self.eval_expr(left)?;
+                match &right.node {
+                    Expr::Call(callee, args) => {
+                        let func = self.eval_expr(callee)?;
+                        let mut all_args: Vec<Value> = vec![left_val];
+                        for arg in args {
+                            all_args.push(self.eval_expr(arg)?);
+                        }
+                        match func {
+                            Value::Builtin(name) => match name.as_str() {
+                                "filter" => {
+                                    if let (Value::List(items), Value::Function(params, body)) =
+                                        (all_args.remove(0), all_args.remove(0))
+                                    {
+                                        let mut result = Vec::new();
+                                        for item in items {
+                                            self.scopes.push(HashMap::new());
+                                            self.define(params[0].clone(), item.clone());
+                                            let val = self.eval_block(&body);
+                                            self.scopes.pop();
+                                            match val? {
+                                                Value::Bool(true) => result.push(item),
+                                                Value::Bool(false) => {}
+                                                _ => {
+                                                    return Err(self.error(
+                                                        "filter function must return bool",
+                                                        span,
+                                                    ))
+                                                }
+                                            }
+                                        }
+                                        Ok(Value::List(result))
+                                    } else {
+                                        Err(self
+                                            .error("filter expects a list and a function", span))
+                                    }
+                                }
+                                "map" => {
+                                    if let (Value::List(items), Value::Function(params, body)) =
+                                        (all_args.remove(0), all_args.remove(0))
+                                    {
+                                        let mut result = Vec::new();
+                                        for item in items {
+                                            self.scopes.push(HashMap::new());
+                                            self.define(params[0].clone(), item.clone());
+                                            let value = self.eval_block(&body);
+                                            self.scopes.pop();
+                                            result.push(value?);
+                                        }
+                                        Ok(Value::List(result))
+                                    } else {
+                                        Err(self
+                                            .error("filter expects a list and a function", span))
+                                    }
+                                }
+                                _ => Err(self.error(&format!("unknown builtin '{}'", name), span)),
+                            },
+                            Value::Function(param_names, body) => {
+                                self.scopes.push(HashMap::new());
+                                param_names
+                                    .iter()
+                                    .zip(all_args)
+                                    .for_each(|(name, val)| self.define(name.clone(), val));
+                                let result = self.eval_block(&body);
+                                self.scopes.pop();
+                                result
+                            }
+                            _ => Err(self.error("cannot call a non-function value", span)),
+                        }
+                    }
+                    _ => Err(self.error("right side of pipeline must be a function call", span)),
+                }
+            }
             _ => Err(self.error("expression type not yet implemented", span)),
         }
     }
 
     fn register_builtins(&mut self) {
         self.define("print".to_string(), Value::Builtin("print".to_string()));
+        self.define("filter".to_string(), Value::Builtin("filter".to_string()));
+        self.define("map".to_string(), Value::Builtin("map".to_string()));
     }
 
     fn assign(&mut self, name: &str, value: Value) -> bool {

@@ -36,11 +36,17 @@ fn main() {
             // }
             // println!("{:#?}", tokens);
             let mut parser = Parser::new(tokens);
-            let (decls, errors) = parser.parse();
+            let (decls, parser_errors) = parser.parse();
             // println!("{:#?}", decls);
-            // println!("{:#?}", errors);
+            // println!("{:#?}", parser_errors);
             let mut interpreter = Interpreter::new();
-            let value = interpreter.interpret(decls);
+            match interpreter.interpret(decls) {
+                Ok(value) => {}
+                Err(e) => eprintln!(
+                    "runtime error at line {}, col {}: {}",
+                    e.line, e.column, e.message
+                ),
+            }
         }
         Err(e) => {
             eprintln!("Error reading '{}': {}", file_path, e);

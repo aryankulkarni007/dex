@@ -1,8 +1,9 @@
 use crate::{
     ast::{
         BinaryOp, BindingDecl, Decl, Expr, FuncDecl, Param, Span, Spanned, SpannedDecl,
-        SpannedExpr, SpannedStmt, Stmt, StructDecl, Type, UnaryOp,
+        SpannedExpr, SpannedStmt, Stmt, StringPart, StructDecl, Type, UnaryOp,
     },
+    lexer::Lexer,
     token::TokenKind,
     Token,
 };
@@ -476,7 +477,11 @@ impl Parser {
                     line: token.line,
                     column: token.column,
                 };
-                Ok(self.spanned(Expr::Str(token.value), span))
+                if token.value.contains('{') {
+                    self.parse_string_interpolation(&token.value, span)
+                } else {
+                    Ok(self.spanned(Expr::Str(token.value), span))
+                }
             }
             TokenKind::Identifier => {
                 let token = self.advance().clone();
@@ -597,7 +602,7 @@ impl Parser {
         }
     }
 
-    fn parse_expr(&mut self) -> Result<SpannedExpr, ParserError> {
+    pub fn parse_expr(&mut self) -> Result<SpannedExpr, ParserError> {
         self.parse_pipeline()
     }
 
@@ -676,6 +681,37 @@ impl Parser {
             TokenKind::Struct => self.parse_struct_decl(),
             _ => self.parse_binding_decl(),
         }
+    }
+
+    fn parse_string_interpolation(
+        &mut self,
+        raw: &str,
+        span: Span,
+    ) -> Result<SpannedExpr, ParserError> {
+        let mut parts = Vec::new();
+        let mut current = raw;
+
+        while let Some(start) = current.find('{') {
+            if start > 0 {
+                parts.push(StringPart::Literal(current[..start].to_string()));
+            }
+            let rest = &current[start + 1..];
+            if let Some(end) = rest.find('}') {
+                let expr_str = &rest[..end];
+                let mut lexer = Lexer::new(expr_str.to_string());
+                let tokens = lexer.tokenize();
+                let mut inner = Parser::new(tokens);
+                let parsed_expr = inner.parse_expr()?;
+                parts.push(StringPart::Expr(parsed_expr));
+                current = &rest[end + 1..];
+            } else {
+                break;
+            }
+        }
+        if !current.is_empty() {
+            parts.push(StringPart::Literal(current.to_string()));
+        }
+        Ok(self.spanned(Expr::StringInterp(parts), span))
     }
 
     pub fn parse(&mut self) -> (Vec<SpannedDecl>, Vec<ParserError>) {

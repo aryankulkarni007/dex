@@ -164,6 +164,12 @@ pub enum UnaryOp {
     Neg,
 }
 
+#[derive(Debug, Clone)]
+pub enum StringPart {
+    Literal(String),
+    Expr(SpannedExpr),
+}
+
 /// An expression — something that can be evaluated to produce a value.
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -218,4 +224,7 @@ pub enum Expr {
     FieldAccess(Box<SpannedExpr>, String),
     /// list expression, index expression
     Index(Box<SpannedExpr>, Box<SpannedExpr>),
+    /// A string with interpolated expressions e.g. "hello {name}"
+    /// Fields: a list of either literal string parts or expressions
+    StringInterp(Vec<StringPart>),
 }
