@@ -1,58 +1,31 @@
-# new draft of Dex
-
 struct Point {
-  x: flt, y: flt
+    x: flt, y: flt
 
-  @(self, x, y) create -> Point {
-    self.x = x
-    self.y = y
-    self
+    @(self, other) distance -> flt {
+      ((self.x - other.x)^2.0 + (self.y - other.y)^2.0)^0.5
+    }
   }
-
-  @(self, other) distance -> flt {
-    ((self.x - other.x)^2 + (self.y - other.y)^2)^0.5
-  }
-
-  @(self) print -> abyss {
-    print("({}, {})", self.x, self.y)
-  }
-}
-
-@(list: [int]) double_evens -> [int] {
-  list >> filter (n -> n % 2 == 0) >> map (n -> n * 2)
-}
 
 @() main -> int {
   print("Hello World")
 
-  # Variable assignment
-  x = 10
-  y: int = 5
-  mut z = 15
+  # Declarations
+  x: Point = Point(0.0, 1.0)
+  y: Point = Point(1.0, 0.0)
 
-  print(x) # "10\n"
+  # using distance as a method
+  distance = x:distance(y)
+  print("{distance}")
 
-  # Call to constructor
-  point1: Point = Point(5.0, 15.0)
-  point2: Point = Point(10.0, 5.0)
+  sqrt2 = 2.0^0.5
+  print("{sqrt2}")
 
-  point1:print()
 
-  # init a float and then assign it 
-  # maybe can skip float creation as it is implicit. Just for demo
-  # of pipeline
-  distance: flt = point1:distance(point2)
+  correct = if distance == sqrt2 {
+      true
+    } else {
+      false
+    }
 
-  print(distance)
-
-  # match y {
-  #   | > 5 -> { print("big") }
-  #   | == 5 -> { print(true) }
-  #   | < 5 -> { print("small") }
-  # }
-
-  list: [int] = [0, 1, 2, 3, 4, 5, 6]
-  new = double_evens(list)
-
-  I (n in list) -> { print(n) }
+  print("{correct}")
 }

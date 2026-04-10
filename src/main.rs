@@ -28,7 +28,7 @@ fn main() {
 
     match read_file(file_path) {
         Ok(content) => {
-            println!("File read successfully");
+            // println!("File read successfully");
             let mut lexer = Lexer::new(content);
             let tokens = lexer.tokenize();
             // for token in &tokens {
